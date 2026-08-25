@@ -64,3 +64,46 @@ function check(board) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { WINNING_COMBOS, createInitialState, getNextPlayer, applyMove, check };
 }
+
+
+
+
+
+// Função undo 
+/**
+ * o Undo deve desfazer somente a última jogada realizada;
+ * após um Undo, o tabuleiro deve voltar à situação anterior àquela jogada e o turno deve retornar ao jogador que a realizou;
+ * após realizar um Undo, não deve ser possível desfazer uma segunda jogada consecutivamente;
+ * ao desfazer uma jogada que resultou em vitória ou empate, a partida deve voltar a permitir novas jogadas;
+ * se uma nova jogada for realizada após um Undo, a jogada anteriormente disponível para Redo não deve mais poder ser refeita;
+ * o controle de Undo deve ficar indisponível quando não houver uma jogada que possa ser desfeita;
+ * ao iniciar uma nova partida, não deve ser possível desfazer ou refazer jogadas da partida anterior.
+ */
+function undoMove(board, lastMoveIndex) {
+  if (lastMoveIndex < 0 || lastMoveIndex > 8) return null; // se o index do ultimo movimento for invalido
+  if (board[lastMoveIndex] === '') return null; // sem movimento para desfazer 
+  const next = board.slice(); // cria uma copia do tabuleiro
+  next[lastMoveIndex] = ''; //atualiza a posição do ultimo movimento do tabuleiro para vazio, desocupando aquela casa
+  return next; // retorna o tabuleiro
+}
+
+
+
+
+//Função redo
+/**
+ * o Redo deve refazer a jogada desfeita pelo Undo, restaurando o tabuleiro e o jogador da vez correspondentes;
+ * ao refazer uma jogada que resulte em vitória ou empate, o resultado correspondente deve voltar a ser reconhecido e
+ *  a partida deve permanecer encerrada;
+ * o controle de Redo deve ficar indisponível quando não houver uma jogada que possa ser refeita;
+  ao iniciar uma nova partida, não deve ser possível desfazer ou refazer jogadas da partida anterior.
+ * 
+*/
+
+function redoMove(board, lastMoveIndex, player) {
+  if (lastMoveIndex < 0 || lastMoveIndex > 8) return null;
+  if (board[lastMoveIndex] !== '') return null; // se a posição do ultimo movimento não estiver vazia, não é possível refazer
+  const next = board.slice(); // cria uma copia do tabuleiro
+  next[lastMoveIndex] = player; // atualiza a posição do ultimo movimento do tabuleiro com o jogador que realizou a jogada
+  return next; // retorna o tabuleiro
+}
