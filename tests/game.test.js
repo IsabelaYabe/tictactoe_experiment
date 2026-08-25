@@ -305,3 +305,88 @@ describe('check — result shape', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Undo / Redo
+// ---------------------------------------------------------------------------
+
+function playSequence(indices) {
+  return indices.reduce((state, index) => playTurn(state, index), createInitialState());
+}
+
+describe('Undo and Redo', () => {
+  test('are unavailable at the start of a game', () => {
+    const state = createInitialState();
+    expect(undoTurn(state)).toBeNull();
+    expect(redoTurn(state)).toBeNull();
+  });
+
+  test('undo removes only the last move and returns the turn to its player', () => {
+    const state = playSequence([0, 1]);
+    const undone = undoTurn(state);
+
+    expect(undone.board[0]).toBe('X');
+    expect(undone.board[1]).toBe('');
+    expect(undone.current).toBe('O');
+  });
+
+  test('a second consecutive undo is unavailable', () => {
+    const state = playSequence([0, 1]);
+    expect(undoTurn(undoTurn(state))).toBeNull();
+  });
+
+  test('redo restores the undone move and corresponding turn', () => {
+    const state = playSequence([0, 1]);
+    const redone = redoTurn(undoTurn(state));
+
+    expect(redone.board[1]).toBe('O');
+    expect(redone.current).toBe('X');
+    expect(redone.undoneMove).toBeNull();
+  });
+
+  test('a new move after undo invalidates redo', () => {
+    const state = playSequence([0, 1]);
+    const undone = undoTurn(state);
+    const changed = playTurn(undone, 2);
+
+    expect(changed.board[2]).toBe('O');
+    expect(redoTurn(changed)).toBeNull();
+  });
+
+  test('undo reopens a won game and redo restores the win', () => {
+    const won = playSequence([0, 3, 1, 4, 2]);
+    expect(won.gameOver).toBe(true);
+
+    const undone = undoTurn(won);
+    expect(undone.gameOver).toBe(false);
+    expect(undone.current).toBe('X');
+    expect(check(undone.board)).toBeNull();
+
+    const redone = redoTurn(undone);
+    expect(redone.gameOver).toBe(true);
+    expect(check(redone.board).winner).toBe('X');
+  });
+
+  test('undo reopens a draw and redo restores the draw', () => {
+    const draw = playSequence([0, 1, 2, 4, 3, 5, 7, 6, 8]);
+    expect(draw.gameOver).toBe(true);
+    expect(check(draw.board).winner).toBeNull();
+
+    const undone = undoTurn(draw);
+    expect(undone.gameOver).toBe(false);
+    expect(check(undone.board)).toBeNull();
+
+    const redone = redoTurn(undone);
+    expect(redone.gameOver).toBe(true);
+    expect(check(redone.board).winner).toBeNull();
+  });
+
+  test('a new game has no history from the previous game', () => {
+    const previousGame = playSequence([0, 1]);
+    expect(previousGame.lastMove).not.toBeNull();
+
+    const newGame = createInitialState();
+    expect(newGame.lastMove).toBeNull();
+    expect(newGame.undoneMove).toBeNull();
+  });
+});

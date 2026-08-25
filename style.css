@@ -133,13 +133,18 @@ h1 {
   transition: background 0.15s, transform 0.1s;
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
   background: #cf6d17;
   transform: translateY(-1px);
 }
 
 .btn:active {
   transform: translateY(0);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .btn-secondary {
