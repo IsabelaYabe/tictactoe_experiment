@@ -1,68 +1,83 @@
 'use strict';
 
-// WINNING_COMBOS, check, getNextPlayer, applyMove, createInitialState
-// are provided by game.js, loaded before this script.
+// check, createInitialState, playTurn, undoTurn and redoTurn are provided by
+// game.js, which is loaded before this script.
 
-const cells    = document.querySelectorAll('.cell');
-const status   = document.getElementById('status');
-const restartBtn     = document.getElementById('restart');
+const cells = document.querySelectorAll('.cell');
+const status = document.getElementById('status');
+const restartBtn = document.getElementById('restart');
+const undoBtn = document.getElementById('undo');
+const redoBtn = document.getElementById('redo');
 
 let data = createInitialState();
-const board = document.getElementById('board');
 
 function render() {
   cells.forEach((cell, i) => {
     cell.textContent = data.board[i];
-    cell.className   = 'cell' + (data.board[i] ? ` ${data.board[i].toLowerCase()}` : '');
-    cell.disabled    = data.board[i] !== '' || data.gameOver;
+    cell.className = 'cell' + (data.board[i] ? ` ${data.board[i].toLowerCase()}` : '');
+    cell.disabled = data.board[i] !== '' || data.gameOver;
   });
+
+  undoBtn.disabled = data.lastMove === null;
+  redoBtn.disabled = data.undoneMove === null;
 }
 
-function setStatus(msg, cls = '') {
-  status.textContent = msg;
-  status.className   = 'status' + (cls ? ` ${cls}` : '');
+function setStatus(message, className = '') {
+  status.textContent = message;
+  status.className = 'status' + (className ? ` ${className}` : '');
 }
 
-function handleClick(e) {
-  const idx = Number(e.currentTarget.dataset.index);
-  if (data.board[idx] || data.gameOver) return;
-
-  const nextBoard = applyMove(data.board, idx, data.current);
-  if (!nextBoard) return;
-  data.board = nextBoard;
+function renderGame() {
   render();
 
-  // Animate the placed cell
-  cells[idx].classList.add('placed');
-
   const result = check(data.board);
-
-  if (result) {
-    data.gameOver = true;
-    if (result.winner) {
-      result.combo.forEach(i => cells[i].classList.add('winning'));
-      setStatus(`Player ${result.winner} wins!`, 'win');
-    } else {
-      setStatus("It's a draw!", 'draw');
-    }
-    // Disable all cells
-    cells.forEach(c => (c.disabled = true));
+  if (!result) {
+    setStatus(`Player ${data.current}'s turn`);
     return;
   }
 
-  data.current = getNextPlayer(data.current);
-  setStatus(`Player ${data.current}'s turn`);
+  if (result.winner) {
+    result.combo.forEach(i => cells[i].classList.add('winning'));
+    setStatus(`Player ${result.winner} wins!`, 'win');
+  } else {
+    setStatus("It's a draw!", 'draw');
+  }
+}
+
+function handleClick(event) {
+  const index = Number(event.currentTarget.dataset.index);
+  const next = playTurn(data, index);
+  if (!next) return;
+
+  data = next;
+  renderGame();
+  cells[index].classList.add('placed');
+}
+
+function undoPlay() {
+  const previous = undoTurn(data);
+  if (!previous) return;
+
+  data = previous;
+  renderGame();
+}
+
+function redoPlay() {
+  const next = redoTurn(data);
+  if (!next) return;
+
+  data = next;
+  renderGame();
 }
 
 function restartGame() {
   data = createInitialState();
-  render();
-  setStatus(`Player ${data.current}'s turn`);
+  renderGame();
 }
 
 cells.forEach(cell => cell.addEventListener('click', handleClick));
 restartBtn.addEventListener('click', restartGame);
+undoBtn.addEventListener('click', undoPlay);
+redoBtn.addEventListener('click', redoPlay);
 
-// Initial render
-render();
-setStatus(`Player ${data.current}'s turn`);
+renderGame();

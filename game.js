@@ -14,6 +14,8 @@ function createInitialState() {
     board:   Array(9).fill(''),
     current: 'X',
     gameOver: false,
+    lastMove: null,
+    undoneMove: null,
   };
 }
 
@@ -62,5 +64,117 @@ function check(board) {
 
 // Allow require() in Node.js (Jest) while remaining a plain script in the browser.
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { WINNING_COMBOS, createInitialState, getNextPlayer, applyMove, check };
+  module.exports = {
+    WINNING_COMBOS,
+    createInitialState,
+    getNextPlayer,
+    applyMove,
+    check,
+    undoMove,
+    redoMove,
+    playTurn,
+    undoTurn,
+    redoTurn,
+  };
+}
+
+
+
+
+
+// Função undo 
+/**
+ * o Undo deve desfazer somente a última jogada realizada;
+ * após um Undo, o tabuleiro deve voltar à situação anterior àquela jogada e o turno deve retornar ao jogador que a realizou;
+ * após realizar um Undo, não deve ser possível desfazer uma segunda jogada consecutivamente;
+ * ao desfazer uma jogada que resultou em vitória ou empate, a partida deve voltar a permitir novas jogadas;
+ * se uma nova jogada for realizada após um Undo, a jogada anteriormente disponível para Redo não deve mais poder ser refeita;
+ * o controle de Undo deve ficar indisponível quando não houver uma jogada que possa ser desfeita;
+ * ao iniciar uma nova partida, não deve ser possível desfazer ou refazer jogadas da partida anterior.
+ */
+function undoMove(board, lastMoveIndex) {
+  if (lastMoveIndex < 0 || lastMoveIndex > 8) return null; // se o index do ultimo movimento for invalido
+  if (board[lastMoveIndex] === '') return null; // sem movimento para desfazer 
+  const next = board.slice(); // cria uma copia do tabuleiro
+  next[lastMoveIndex] = ''; //atualiza a posição do ultimo movimento do tabuleiro para vazio, desocupando aquela casa
+  return next; // retorna o tabuleiro
+}
+
+
+
+
+//Função redo
+/**
+ * o Redo deve refazer a jogada desfeita pelo Undo, restaurando o tabuleiro e o jogador da vez correspondentes;
+ * ao refazer uma jogada que resulte em vitória ou empate, o resultado correspondente deve voltar a ser reconhecido e
+ *  a partida deve permanecer encerrada;
+ * o controle de Redo deve ficar indisponível quando não houver uma jogada que possa ser refeita;
+  ao iniciar uma nova partida, não deve ser possível desfazer ou refazer jogadas da partida anterior.
+ * 
+*/
+
+function redoMove(board, lastMoveIndex, player) {
+  if (lastMoveIndex < 0 || lastMoveIndex > 8) return null;
+  if (board[lastMoveIndex] !== '') return null; // se a posição do ultimo movimento não estiver vazia, não é possível refazer
+  const next = board.slice(); // cria uma copia do tabuleiro
+  next[lastMoveIndex] = player; // atualiza a posição do ultimo movimento do tabuleiro com o jogador que realizou a jogada
+  return next; // retorna o tabuleiro
+}
+
+/**
+ * Applies a turn and returns the complete new game state.
+ * A new move always invalidates a move that was waiting to be redone.
+ */
+function playTurn(state, index) {
+  if (state.gameOver) return null;
+
+  const player = state.current;
+  const board = applyMove(state.board, index, player);
+  if (!board) return null;
+
+  const result = check(board);
+  return {
+    board,
+    current: result ? player : getNextPlayer(player),
+    gameOver: result !== null,
+    lastMove: { index, player },
+    undoneMove: null,
+  };
+}
+
+/**
+ * Undoes one move. Clearing lastMove prevents a second consecutive undo.
+ */
+function undoTurn(state) {
+  if (!state.lastMove) return null;
+
+  const move = state.lastMove;
+  const board = undoMove(state.board, move.index);
+  if (!board) return null;
+
+  return {
+    board,
+    current: move.player,
+    gameOver: false,
+    lastMove: null,
+    undoneMove: { ...move },
+  };
+}
+
+/** Redoes the move saved by undo and restores the resulting game state. */
+function redoTurn(state) {
+  if (!state.undoneMove) return null;
+
+  const move = state.undoneMove;
+  const board = redoMove(state.board, move.index, move.player);
+  if (!board) return null;
+
+  const result = check(board);
+  return {
+    board,
+    current: result ? move.player : getNextPlayer(move.player),
+    gameOver: result !== null,
+    lastMove: { ...move },
+    undoneMove: null,
+  };
 }
